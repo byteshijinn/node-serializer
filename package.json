@@ -1,0 +1,22 @@
+{
+	"name" : "serializer",
+	"description" : "serializer for php session information",
+	"version" : "0.0.1",
+	"repository" : {
+		"type" : "git",
+		"url" : "git://github.com/bombworm/node-serializer.git"
+	},
+	"bugs" : {
+		"url" : "https://github.com/bombworm/node-serializer/issues"
+	},
+	"os" : [ "linux", "darwin", "freebsd", "windows" ],
+	"author" : "Zhao Lei <bombworm@gmail.com>",
+	"main" : "lib/serializer.js",
+	"engines" : {
+		"node" : ">=0.5.8"
+	},
+	"licenses" : [ {
+		"type" : "The MIT License",
+		"url" : "http://www.opensource.org/licenses/mit-license.php"
+	} ]
+}
