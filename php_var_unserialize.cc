@@ -29,7 +29,7 @@
 
 using namespace v8;
 
-#define SIZEOF_LONG		4
+#define SIZEOF_LONG        4
 #if SIZEOF_LONG == 4
 #define MAX_LENGTH_OF_LONG 11
 static const char long_min_digits[] = "2147483648";
@@ -240,11 +240,11 @@ int php_var_unserialize(Handle<Value> *rval, const unsigned char **p, const unsi
 
         if ((YYLIMIT - YYCURSOR) < 7) YYFILL(7);
         yych = *YYCURSOR;
-        switch (yych) {
-            case 'C':
+        switch (yych) { //php_var_serialize_intern
+            case 'C': //Custom Object
             case 'O': goto yy13; //php object e.g. StdClass
             case 'N': goto yy5; //null
-            case 'R': goto yy2;
+            case 'R': goto yy2; //Z_ISREF_P
             case 'S': goto yy10;
             case 'a': goto yy11; //Array && Object
             case 'b': goto yy6; //Boolean
@@ -333,15 +333,84 @@ yy20:
         ++YYCURSOR;
         if ((YYLIMIT - YYCURSOR) < 2) YYFILL(2);
         yych = *YYCURSOR;
-        if (yybm[0 + yych] & 128) {
+        if (yybm[0+yych] & 128) {
             goto yy20;
         }
         if (yych != ':') goto yy18;
         yych = *++YYCURSOR;
         if (yych != '"') goto yy18;
         ++YYCURSOR;
-        //do not unserialize php class here
-        return 0;
+        {
+            size_t len, len2, len3, maxlen;
+            long elements;
+            char *class_name;
+            int incomplete_class = 0;
+
+            int custom_object = 0;
+
+            if (*start == 'C') {
+                custom_object = 1;
+            }
+
+            len2 = len = parse_uiv(start + 2);
+            maxlen = max - YYCURSOR;
+            if (maxlen < len || len == 0) {
+                *p = start + 2;
+                return 0;
+            }
+
+            class_name = (char*)YYCURSOR;
+
+            YYCURSOR += len;
+
+            if (*(YYCURSOR) != '"') {
+                *p = YYCURSOR;
+                return 0;
+            }
+            if (*(YYCURSOR+1) != ':') {
+                *p = YYCURSOR+1;
+                return 0;
+            }
+
+            len3 = strspn(class_name, "0123456789_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\177\200\201\202\203\204\205\206\207\210\211\212\213\214\215\216\217\220\221\222\223\224\225\226\227\230\231\232\233\234\235\236\237\240\241\242\243\244\245\246\247\250\251\252\253\254\255\256\257\260\261\262\263\264\265\266\267\270\271\272\273\274\275\276\277\300\301\302\303\304\305\306\307\310\311\312\313\314\315\316\317\320\321\322\323\324\325\326\327\330\331\332\333\334\335\336\337\340\341\342\343\344\345\346\347\350\351\352\353\354\355\356\357\360\361\362\363\364\365\366\367\370\371\372\373\374\375\376\377\\");
+            if (len3 != len)
+            {
+                *p = YYCURSOR + len3 - len;
+                return 0;
+            }
+
+            //Handle<String> h_class_name = String::New(class_name, len);
+
+            yych = *(YYMARKER = ++YYCURSOR);
+            if (yych == ':') goto zl0;
+    zl0:
+            yych = *++YYCURSOR;
+            if (yych == '+') goto zl1;
+            if (yych <= '/') goto yy18;
+            if (yych <= '9') goto zl2;
+            goto yy18;
+    zl1:
+            yych = *++YYCURSOR;
+            if (yych <= '/') goto yy18;
+            if (yych >= ':') goto yy18;
+    zl2:
+            ++YYCURSOR;
+            if ((YYLIMIT - YYCURSOR) < 2) YYFILL(2);
+            yych = *YYCURSOR;
+            if (yych <= '/') goto yy18;
+            if (yych <= '9') goto zl2;
+            if (yych >= ';') goto yy18;
+            yych = *++YYCURSOR;
+            if (yych != '{') goto yy18;
+            ++YYCURSOR;
+            *p = YYCURSOR;
+            elements = parse_uiv(YYMARKER + 1);
+            if (!process_nested_data(UNSERIALIZE_PASSTHRU, elements, 0)) {
+                return 0;
+            }
+
+            return finish_nested_data(UNSERIALIZE_PASSTHRU);
+        }
 yy25:
         yych = *++YYCURSOR;
         if (yych <= ',') {
